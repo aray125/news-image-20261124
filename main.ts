@@ -5,9 +5,14 @@
 //
 // Run: mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { copyFileSync, existsSync, mkdirSync, statSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+function sha256(path) {
+  return createHash('sha256').update(readFileSync(path)).digest('hex');
+}
 
 const source = join(dirname(fileURLToPath(import.meta.url)), 'entry.png');
 const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
@@ -20,10 +25,10 @@ if (!existsSync(source)) {
 mkdirSync(outDir, { recursive: true });
 copyFileSync(source, target);
 
-const inBytes = statSync(source).size;
-const outBytes = statSync(target).size;
-if (inBytes !== outBytes) {
-  throw new Error(`copy mismatch: source ${inBytes} bytes, output ${outBytes} bytes`);
+const sourceHash = sha256(source);
+const targetHash = sha256(target);
+if (sourceHash !== targetHash) {
+  throw new Error(`copy mismatch: source sha256 ${sourceHash}, output sha256 ${targetHash}`);
 }
 
-console.log(`wrote ${target} (${outBytes} bytes)`);
+console.log(`wrote ${target} (sha256 ${targetHash})`);
